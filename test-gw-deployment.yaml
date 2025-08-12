@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "test-gw-grp-test-gw"
+  labels:
+    app: "test-gw-grp-test-gw"
+    gatewayGroup: "test-gw-grp"
+    gatewayId: "test-gw"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "test-gw-grp-test-gw"
+      gatewayGroup: "test-gw-grp"
+      gatewayId: "test-gw"
+  template:
+    metadata:
+      labels:
+        app: "test-gw-grp-test-gw"
+        gatewayGroup: "test-gw-grp"
+        gatewayId: "test-gw"
+    spec:
+      containers:
+      - name: egw
+        image: icr.io/cpopen/ibm-eventendpointmanagement/egw:11.6.2
+        resources:
+          limits:
+            cpu: 2
+            ephemeral-storage: 800M
+            memory: 2Gi
+          requests:
+            cpu: 1
+            ephemeral-storage: 800M
+            memory: 1Gi
+        ports:
+        - containerPort: 8443
+          name: kafka-client
+        env:
+        - name: backendURL
+          value: "https://dev5468355.eem.eem.apps.eas-vir-r01.events.ipaas.automation.ibm.com/gateway"
+        - name: GATEWAY_PORT
+          value: "8443"
+        - name: KAFKA_ADVERTISED_LISTENER
+          value: "test-gw-grp-test-gw-1.apps.687f8f95ea2fca3eff46b2e2.am1.techzone.ibm.com:443,test-gw-grp-test-gw-2.apps.687f8f95ea2fca3eff46b2e2.am1.techzone.ibm.com:443,test-gw-grp-test-gw-3.apps.687f8f95ea2fca3eff46b2e2.am1.techzone.ibm.com:443"
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: apiKey
+              name: "test-gw-grp-test-gw"
+        - name: LICENSE_ID
+          value: "L-KCVZ-JL5CRM"
+        - name: ACCEPT_LICENSE
+          value: "true"
+        # Optional env GATEWAY_TRUST_PEM for ca to be presented in the UI
+        - name: GATEWAY_TRUST_PEM
+          valueFrom:
+            secretKeyRef:
+              key: ca.crt
+              name: "test-gw-grp-test-gw-certs"
+        # Optional env for enabling kafka record end to end monitoring
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "https://uhm.a-vir-r1.e2em.ipaas.automation.ibm.com:443"
+        - name: OTEL_LOGS_EXPORTER
+          value: none
+        - name: OTEL_METRICS_EXPORTER
+          value: none
+        - name: OTEL_SERVICE_NAME
+          value: "EEM Gateway - test-gw-grp/test-gw"
+        - name: IBM_JAVA_OPTIONS
+          value: "-javaagent:/opt/ibm/gateway/lib/opentelemetry-javaagent.jar"
+        - name: EGW_ENABLE_OTEL_METRICS
+          value: "false"
+        - name: EGW_ENABLE_OTEL_KAFKA_RECORD_TRACING
+          value: "true"
+        - name: OTEL_EXPORTER_OTLP_HEADERS
+          value: "Authorization=mcsp-key apikey=<insert-e2em-api-key>"
+        volumeMounts:
+        - name: certs
+          mountPath: "/certs/client.pem"
+          subPath: "tls.crt"
+          readOnly: true
+        - name: certs
+          mountPath: "/certs/client.key"
+          subPath: "tls.key"
+          readOnly: true
+      volumes:
+      - name: certs 
+        secret: 
+          secretName: "test-gw-grp-test-gw-certs"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: "test-gw-grp-test-gw"
+spec:
+  ports:
+    - name: kafka-client
+      protocol: TCP
+      port: 8443
+      targetPort: kafka-client
+  type: ClusterIP
+  sessionAffinity: None
+  selector:
+    app: "test-gw-grp-test-gw"
+    gatewayGroup: "test-gw-grp"
+    gatewayId: "test-gw"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "test-gw-grp-test-gw"
+  labels:
+    app: "test-gw-grp-test-gw"
+    gatewayGroup: "test-gw-grp"
+    gatewayId: "test-gw"
+type: Opaque
+stringData:
+  apiKey: "b34dbeca-0277-42f8-8251-c991580ef2c4"
