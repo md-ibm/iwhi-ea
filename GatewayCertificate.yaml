@@ -1,0 +1,47 @@
+apiVersion: cert-manager.io/v1
+
+kind: Certificate
+
+metadata:
+
+  name: test-eem-gw-cert-request
+
+spec:
+
+  secretName: test-gw-grp-test-gw-certs
+
+  privateKey:
+
+    algorithm: RSA
+
+  duration: 2160h # 90d
+
+  renewBefore: 360h # 15d
+
+  isCA: false
+
+  usages:
+
+    - server auth
+
+  subject:
+
+    organizations:
+
+      - cert-manager
+
+  commonName: testgw
+
+  dnsNames:
+
+    - test-gw-grp-test-gw-1.apps.687f8f95ea2fca3eff46b2e2.am1.techzone.ibm.com
+
+    - test-gw-grp-test-gw-2.apps.687f8f95ea2fca3eff46b2e2.am1.techzone.ibm.com
+
+    - test-gw-grp-test-gw-3.apps.687f8f95ea2fca3eff46b2e2.am1.techzone.ibm.com
+
+  issuerRef:
+
+    name: eem-ca-issuer
+
+    kind: ClusterIssuer
